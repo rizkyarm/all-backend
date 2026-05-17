@@ -1,0 +1,99 @@
+services:
+  # ----------------------------------------
+  # 1. PostgreSQL Database
+  # ----------------------------------------
+  postgres:
+    image: postgres:15-alpine
+    container_name: all_backend_postgres_prod
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin123}
+      POSTGRES_DB: ${POSTGRES_DB:-all_backend_prod}
+    # Optional: Expose port for debugging, but typically hidden in strict production
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    networks:
+      - backend_network
+
+  # ----------------------------------------
+  # 2. Redis (For BullMQ & Caching)
+  # ----------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: all_backend_redis_prod
+    restart: always
+    command: redis-server --appendonly yes
+    # Optional: Expose port for debugging
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data_prod:/data
+    networks:
+      - backend_network
+
+  # ----------------------------------------
+  # 3. MinIO (S3 Compatible File Storage)
+  # ----------------------------------------
+  minio:
+    image: minio/minio:latest
+    container_name: all_backend_minio_prod
+    restart: always
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minio_admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minio_password123}
+    ports:
+      - "9000:9000" # S3 API Port
+      - "9001:9001" # Web Console Port
+    volumes:
+      - minio_data_prod:/data
+    networks:
+      - backend_network
+
+  # ----------------------------------------
+  # 4. NestJS Backend API Service
+  # ----------------------------------------
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: all_backend_api_prod
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      # Auto-connects to the internal Docker network aliases
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-admin123}@postgres:5432/${POSTGRES_DB:-all_backend_prod}?schema=public
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minio_admin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minio_password123}
+      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-my-bucket}
+      # Make sure to override these in your actual production server's .env file!
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET:-your_super_secret_jwt_key_prod}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-your_super_secret_refresh_key_prod}
+      - FRONTEND_URL=${FRONTEND_URL:-*}
+    depends_on:
+      - postgres
+      - redis
+      - minio
+    networks:
+      - backend_network
+    # Automatically apply database migrations before starting the Node server
+    command: sh -c "npx prisma migrate deploy && node dist/main.js"
+
+volumes:
+  postgres_data_prod:
+  redis_data_prod:
+  minio_data_prod:
+
+networks:
+  backend_network:
+    driver: bridge

@@ -1,0 +1,70 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  # ---------------------------------------------------------
+  # 1. TEST STAGE
+  # ---------------------------------------------------------
+  test:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Run Tests
+        # Uncomment if you have tests configured
+        # run: npm run test
+        run: echo "Tests passed!" # Placeholder until real tests are added
+
+      - name: Run Linter
+        run: npm run lint
+
+  # ---------------------------------------------------------
+  # 2. BUILD & PUSH DOCKER IMAGE STAGE
+  # ---------------------------------------------------------
+  build-and-push:
+    name: Build & Push to Docker Hub
+    needs: test
+    # Only run this job if the push is on the main branch (not on PRs)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          # Replace 'yourdockerhubusername' with your actual username
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/all-backend:latest,${{ secrets.DOCKERHUB_USERNAME }}/all-backend:${{ github.sha }}
+          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/all-backend:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/all-backend:buildcache,mode=max
