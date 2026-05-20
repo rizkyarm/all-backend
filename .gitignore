@@ -3,6 +3,9 @@
 /node_modules
 /build
 
+# Prisma generated (root-level — actual output goes to src/generated)
+/generated
+
 # Logs
 logs
 *.log
@@ -11,6 +14,12 @@ pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
+nohup.out
+
+# Environment
+.env
+.env.local
+.env.*.local
 
 # OS
 .DS_Store
@@ -27,6 +36,9 @@ lerna-debug.log*
 *.launch
 .settings/
 *.sublime-workspace
+
+# Docker
+docker-compose.override.yml
 
 # IDE - VSCode
 .vscode/*

@@ -63,3 +63,116 @@ model File {
 
   @@index([uploaderId])
 }
+
+// ── Portfolio Enums ──
+
+enum Category {
+  website
+  android
+  video
+  design
+}
+
+enum Status {
+  live
+  draft
+}
+
+// ── Portfolio Models ──
+
+model Project {
+  id               Int      @id @default(autoincrement())
+  title            String
+  slug             String   @unique
+  category         Category
+  description      String   @db.Text
+  shortDescription String?
+  tags             Json     @default("[]")
+  features         Json     @default("[]")
+  techStack        Json     @default("[]")
+  thumbnail        String?
+  images           Json     @default("[]")
+  demoUrl          String?
+  repoUrl          String?
+  status           Status   @default(draft)
+  isFeatured       Boolean  @default(false)
+  order            Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([category])
+  @@index([status])
+  @@index([isFeatured])
+  @@index([order])
+  @@map("projects")
+}
+
+model Skill {
+  id        Int      @id @default(autoincrement())
+  name      String
+  category  String
+  icon      String?
+  color     String?  @db.VarChar(20)
+  level     Int      @default(80)
+  order     Int      @default(0)
+  isVisible Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@index([isVisible])
+  @@index([order])
+  @@map("skills")
+}
+
+model Service {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String   @db.Text
+  icon        String?
+  priceRange  String?
+  includes    Json     @default("[]")
+  color       String?  @db.VarChar(20)
+  featured    Boolean  @default(false)
+  order       Int      @default(0)
+  isVisible   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isVisible])
+  @@index([order])
+  @@map("services")
+}
+
+model Message {
+  id        Int       @id @default(autoincrement())
+  name      String
+  email     String
+  subject   String?
+  body      String    @db.Text
+  isRead    Boolean   @default(false)
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([isRead])
+  @@map("messages")
+}
+
+model Profile {
+  id        Int      @id @default(autoincrement())
+  name      String
+  tagline   String?
+  bio       String?  @db.Text
+  email     String?
+  phone     String?
+  location  String?
+  avatar    String?
+  cvUrl     String?
+  socials   Json     @default("{}")
+  stats     Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("profiles")
+}

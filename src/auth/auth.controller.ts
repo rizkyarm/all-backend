@@ -5,14 +5,18 @@ import {
   Body,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto, LoginDto, RefreshTokenDto } from './dto';
 import { Public } from './decorators';
 import { CurrentUser } from './decorators';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { RawResponse } from '../common/decorators/raw-response.decorator';
+import { OptionalJwtAuthGuard } from './guards/optional-jwt-auth.guard';
 
 @ApiTags('Auth')
+@RawResponse()
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -44,9 +48,14 @@ export class AuthController {
     return this.authService.logout(dto.refreshToken);
   }
 
+  @Public()
+  @UseGuards(OptionalJwtAuthGuard)
   @ApiBearerAuth()
   @Get('me')
-  getMe(@CurrentUser('id') userId: string) {
+  getMe(@CurrentUser('id') userId?: string) {
+    if (!userId) {
+      return { user: null };
+    }
     return this.authService.getMe(userId);
   }
 }

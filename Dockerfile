@@ -42,11 +42,21 @@ RUN chown node:node /usr/src/app
 # Copy package files with correct ownership
 COPY --chown=node:node package*.json ./
 
-# Install ONLY production dependencies
-RUN npm ci --omit=dev
+# Install ONLY production dependencies + tsx (needed by prisma.config.ts at runtime)
+RUN npm ci --omit=dev && npm install tsx
 
-# Copy Prisma schema and generate client for production
+# Copy Prisma schema, config, and generate client for production
 COPY --chown=node:node prisma ./prisma
+COPY --chown=node:node prisma.config.ts tsconfig.json ./
+
+# Set placeholder DB vars so `prisma generate` can resolve prisma.config.ts
+# (real values are injected via docker-compose / K8s at runtime)
+ENV DB_USERNAME=placeholder \
+    DB_PASSWORD=placeholder \
+    DB_HOST=localhost \
+    DB_PORT=5432 \
+    DB_DATABASE=placeholder
+
 RUN npx prisma generate
 
 # Copy the compiled application from the builder stage

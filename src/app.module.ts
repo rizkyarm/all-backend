@@ -18,6 +18,7 @@ import { BullBoardModule } from '@bull-board/nestjs';
 import { ExpressAdapter } from '@bull-board/express';
 import { ScheduleModule } from '@nestjs/schedule';
 import { CronModule } from './cron/cron.module';
+import { PortfolioModule } from './portfolio/portfolio.module';
 import { LoggerModule } from 'nestjs-pino';
 import * as crypto from 'crypto';
 
@@ -72,6 +73,7 @@ import * as crypto from 'crypto';
     NotificationsModule,
     EmailModule,
     CronModule,
+    PortfolioModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -82,6 +82,7 @@ export class AuthService {
 
     return {
       user: this.sanitizeUser(user),
+      token: tokens.accessToken,
       ...tokens,
     };
   }
@@ -108,6 +109,7 @@ export class AuthService {
 
     return {
       user: this.sanitizeUser(user),
+      token: tokens.accessToken,
       ...tokens,
     };
   }
@@ -155,6 +157,7 @@ export class AuthService {
 
     return {
       user: this.sanitizeUser(user),
+      token: tokens.accessToken,
       ...tokens,
     };
   }
@@ -183,11 +186,11 @@ export class AuthService {
       ]);
     }
 
-    return { message: 'Logged out successfully' };
+    return { message: 'Logout berhasil' };
   }
 
   // ─── Get Current User ───────────────────────────────────────
-  async getMe(userId: string): Promise<SanitizedUser> {
+  async getMe(userId: string): Promise<{ user: SanitizedUser }> {
     const user = await this.prisma.client.user.findUnique({
       where: { id: userId },
     });
@@ -196,7 +199,7 @@ export class AuthService {
       throw new UnauthorizedException('User not found');
     }
 
-    return this.sanitizeUser(user);
+    return { user: this.sanitizeUser(user) };
   }
 
   // ─── Helpers ────────────────────────────────────────────────

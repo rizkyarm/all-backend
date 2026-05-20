@@ -1,4 +1,4 @@
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -7,6 +7,8 @@ import { ResponseTransformerInterceptor } from './common/interceptors';
 import { HttpExceptionFilter } from './common/filters';
 import { Logger } from 'nestjs-pino';
 
+import { SnakeToCamelValidationPipe } from './common/pipes/snake-to-camel-validation.pipe';
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   app.useLogger(app.get(Logger));
@@ -14,24 +16,33 @@ async function bootstrap() {
   app.setGlobalPrefix('api/v1');
 
   // Security: Helmet sets various HTTP headers to help protect the app
-  app.use(helmet());
+  // Configure cross-origin policies to allow frontend requests
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+      crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
+    }),
+  );
 
   // Security: Enable CORS with proper settings
+  // Note: credentials:true requires a specific origin, NOT '*'
+  const frontendUrl = process.env.FRONTEND_URL;
   app.enableCors({
-    origin: process.env.FRONTEND_URL || '*', // Restrict this in production
+    origin: frontendUrl ? frontendUrl.split(',').map((u) => u.trim()) : '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    credentials: true, // Allow cookies/authorization headers
+    credentials: !!frontendUrl, // Only enable credentials when a specific origin is set
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   });
 
   app.useGlobalPipes(
-    new ValidationPipe({
+    new SnakeToCamelValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
     }),
   );
 
-  app.useGlobalInterceptors(new ResponseTransformerInterceptor());
+  app.useGlobalInterceptors(new ResponseTransformerInterceptor(app.get(Reflector)));
   app.useGlobalFilters(new HttpExceptionFilter());
 
   // Setup Swagger (disabled in production to hide internal API structure)

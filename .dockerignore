@@ -6,7 +6,16 @@ dist
 .env.test
 .env.production
 npm-debug.log
+nohup.out
 *.md
+!README.md
 .DS_Store
 docker-compose.yml
+docker-compose.prod.yml
 Dockerfile
+generated
+.eslintrc.js
+coverage
+.github
+.vscode
+test

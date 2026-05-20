@@ -12,6 +12,8 @@ services:
       - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app_network
 
   # Caching: Redis
   redis:
@@ -22,6 +24,8 @@ services:
       - '6379:6379'
     volumes:
       - redis_data:/data
+    networks:
+      - app_network
 
   # Object Storage: MinIO
   minio:
@@ -29,17 +33,63 @@ services:
     container_name: nestjs-minio
     restart: always
     ports:
-      - '9000:9000' 
-      - '9001:9001' 
+      - '9000:9000'
+      - '9001:9001'
     environment:
       MINIO_ROOT_USER: minio_user
       MINIO_ROOT_PASSWORD: minio_password
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
+    networks:
+      - app_network
+
+  # NestJS API — builds from local Dockerfile
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nestjs-api
+    restart: always
+    ports:
+      - '3000:3000'
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: user_admin
+      DB_PASSWORD: password_rahasia
+      DB_DATABASE: db_project
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: minio_user
+      MINIO_SECRET_KEY: minio_password
+      MINIO_BUCKET_NAME: my-bucket
+      JWT_ACCESS_SECRET: super_secret_jwt_key_change_me
+      JWT_REFRESH_SECRET: super_secret_refresh_key_change_me
+      JWT_ACCESS_EXPIRATION: 15m
+      JWT_REFRESH_EXPIRATION: 7d
+      FRONTEND_URL: '*'
+    depends_on:
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+      minio:
+        condition: service_started
+    networks:
+      - app_network
+    command: sh -c "sleep 3 && npx prisma migrate deploy && node dist/main.js"
 
 volumes:
   postgres_data:
   redis_data:
   minio_data:
+
+networks:
+  app_network:
+    driver: bridge
 

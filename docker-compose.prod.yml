@@ -57,6 +57,9 @@ services:
   # 4. NestJS Backend API Service
   # ----------------------------------------
   api:
+    # Option A: Pull from Docker Hub (set DOCKERHUB_USERNAME in .env)
+    # Option B: Build locally (leave DOCKERHUB_USERNAME empty or run: docker compose build)
+    image: ${DOCKERHUB_USERNAME:?err}/all-backend:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -67,7 +70,13 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
-      # Auto-connects to the internal Docker network aliases
+      # Database connection (used by prisma.config.ts for migrations)
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=${POSTGRES_USER:-admin}
+      - DB_PASSWORD=${POSTGRES_PASSWORD:-admin123}
+      - DB_DATABASE=${POSTGRES_DB:-all_backend_prod}
+      # DATABASE_URL (used by app runtime via PrismaService)
       - DATABASE_URL=postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-admin123}@postgres:5432/${POSTGRES_DB:-all_backend_prod}?schema=public
       - REDIS_HOST=redis
       - REDIS_PORT=6379
@@ -79,6 +88,8 @@ services:
       # Make sure to override these in your actual production server's .env file!
       - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET:-your_super_secret_jwt_key_prod}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-your_super_secret_refresh_key_prod}
+      - JWT_ACCESS_EXPIRATION=${JWT_ACCESS_EXPIRATION:-15m}
+      - JWT_REFRESH_EXPIRATION=${JWT_REFRESH_EXPIRATION:-7d}
       - FRONTEND_URL=${FRONTEND_URL:-*}
     depends_on:
       - postgres
@@ -86,8 +97,8 @@ services:
       - minio
     networks:
       - backend_network
-    # Automatically apply database migrations before starting the Node server
-    command: sh -c "npx prisma migrate deploy && node dist/main.js"
+    # Wait for postgres, then apply migrations and start the server
+    command: sh -c "sleep 3 && npx prisma migrate deploy && node dist/main.js"
 
 volumes:
   postgres_data_prod:
