@@ -37,10 +37,7 @@ export class AdminServicesController {
   }
 
   @Put(':id')
-  update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateServiceDto,
-  ) {
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateServiceDto) {
     return this.servicesService.update(id, dto);
   }
 

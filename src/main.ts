@@ -1,5 +1,4 @@
 import { NestFactory, Reflector } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
@@ -42,7 +41,9 @@ async function bootstrap() {
     }),
   );
 
-  app.useGlobalInterceptors(new ResponseTransformerInterceptor(app.get(Reflector)));
+  app.useGlobalInterceptors(
+    new ResponseTransformerInterceptor(app.get(Reflector)),
+  );
   app.useGlobalFilters(new HttpExceptionFilter());
 
   // Setup Swagger (disabled in production to hide internal API structure)

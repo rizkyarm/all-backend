@@ -35,7 +35,7 @@ export class OptionalJwtAuthGuard extends AuthGuard('jwt') {
     user: AuthenticatedUser | false | null,
   ): AuthenticatedUser | null {
     if (err || !user) {
-      return null as unknown as AuthenticatedUser;
+      return null;
     }
     return user;
   }

@@ -52,11 +52,14 @@ export class AdminProjectsController {
     ]),
   )
   create(
-    @Body(new SnakeToCamelValidationPipe({
-      whitelist: true,
-      transform: true,
-      // omit forbidNonWhitelisted – multipart form data may carry extra fields
-    })) dto: CreateProjectDto,
+    @Body(
+      new SnakeToCamelValidationPipe({
+        whitelist: true,
+        transform: true,
+        // omit forbidNonWhitelisted – multipart form data may carry extra fields
+      }),
+    )
+    dto: CreateProjectDto,
     @UploadedFiles()
     files: {
       thumbnail?: Express.Multer.File[];
@@ -80,10 +83,13 @@ export class AdminProjectsController {
   )
   update(
     @Param('id', ParseIntPipe) id: number,
-    @Body(new SnakeToCamelValidationPipe({
-      whitelist: true,
-      transform: true,
-    })) dto: UpdateProjectDto,
+    @Body(
+      new SnakeToCamelValidationPipe({
+        whitelist: true,
+        transform: true,
+      }),
+    )
+    dto: UpdateProjectDto,
     @UploadedFiles()
     files: {
       thumbnail?: Express.Multer.File[];
@@ -108,10 +114,13 @@ export class AdminProjectsController {
   )
   partialUpdate(
     @Param('id', ParseIntPipe) id: number,
-    @Body(new SnakeToCamelValidationPipe({
-      whitelist: true,
-      transform: true,
-    })) dto: UpdateProjectDto,
+    @Body(
+      new SnakeToCamelValidationPipe({
+        whitelist: true,
+        transform: true,
+      }),
+    )
+    dto: UpdateProjectDto,
     @UploadedFiles()
     files: {
       thumbnail?: Express.Multer.File[];

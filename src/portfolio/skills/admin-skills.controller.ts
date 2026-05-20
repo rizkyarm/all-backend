@@ -37,10 +37,7 @@ export class AdminSkillsController {
   }
 
   @Put(':id')
-  update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateSkillDto,
-  ) {
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateSkillDto) {
     return this.skillsService.update(id, dto);
   }
 

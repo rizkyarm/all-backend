@@ -35,10 +35,13 @@ export class AdminProfileController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('avatar'))
   updateProfile(
-    @Body(new SnakeToCamelValidationPipe({
-      whitelist: true,
-      transform: true,
-    })) dto: UpdateProfileDto,
+    @Body(
+      new SnakeToCamelValidationPipe({
+        whitelist: true,
+        transform: true,
+      }),
+    )
+    dto: UpdateProfileDto,
     @UploadedFile() avatar?: Express.Multer.File,
   ) {
     return this.profileService.updateProfile(dto, avatar);

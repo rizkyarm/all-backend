@@ -1,7 +1,4 @@
-import {
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StorageService } from '../../storage/storage.service';
 import { UpdateProfileDto } from './dto';
@@ -67,7 +64,7 @@ export class ProfileService {
         try {
           await this.storage.deleteFile(existing.avatar);
         } catch (err) {
-          this.logger.warn(`Failed to delete old avatar: ${err}`);
+          this.logger.warn(`Failed to delete old avatar: ${String(err)}`);
         }
       }
       data.avatar = await this.storage.uploadFile(
@@ -109,7 +106,7 @@ export class ProfileService {
     if (transformed.avatar && typeof transformed.avatar === 'string') {
       try {
         transformed.avatar = await this.storage.getPresignedUrl(
-          transformed.avatar as string,
+          transformed.avatar,
         );
       } catch {
         transformed.avatar = null;

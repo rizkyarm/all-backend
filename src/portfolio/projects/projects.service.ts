@@ -1,10 +1,7 @@
-import {
-  Injectable,
-  NotFoundException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StorageService } from '../../storage/storage.service';
+import type { Prisma } from '../../generated/prisma/client.js';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { QueryProjectDto } from './dto/query-project.dto';
@@ -132,7 +129,7 @@ export class ProjectsService {
         description: dto.description,
         shortDescription: dto.shortDescription || null,
         tags: dto.tags || [],
-        features: (dto.features as any) || [],
+        features: (dto.features as Prisma.InputJsonValue) || [],
         techStack: dto.techStack || [],
         thumbnail: thumbnailKey,
         images: imageKeys,
@@ -172,7 +169,8 @@ export class ProjectsService {
     }
     if (dto.category !== undefined) data.category = dto.category;
     if (dto.description !== undefined) data.description = dto.description;
-    if (dto.shortDescription !== undefined) data.shortDescription = dto.shortDescription;
+    if (dto.shortDescription !== undefined)
+      data.shortDescription = dto.shortDescription;
     if (dto.tags !== undefined) data.tags = dto.tags;
     if (dto.features !== undefined) data.features = dto.features;
     if (dto.techStack !== undefined) data.techStack = dto.techStack;
@@ -189,7 +187,7 @@ export class ProjectsService {
         try {
           await this.storage.deleteFile(existing.thumbnail);
         } catch (err) {
-          this.logger.warn(`Failed to delete old thumbnail: ${err}`);
+          this.logger.warn(`Failed to delete old thumbnail: ${String(err)}`);
         }
       }
       data.thumbnail = await this.storage.uploadFile(
@@ -208,7 +206,7 @@ export class ProjectsService {
         try {
           await this.storage.deleteFile(oldKey);
         } catch (err) {
-          this.logger.warn(`Failed to delete old image: ${err}`);
+          this.logger.warn(`Failed to delete old image: ${String(err)}`);
         }
       }
 
@@ -247,7 +245,7 @@ export class ProjectsService {
       try {
         await this.storage.deleteFile(project.thumbnail);
       } catch (err) {
-        this.logger.warn(`Failed to delete thumbnail: ${err}`);
+        this.logger.warn(`Failed to delete thumbnail: ${String(err)}`);
       }
     }
 
@@ -256,7 +254,7 @@ export class ProjectsService {
       try {
         await this.storage.deleteFile(imageKey);
       } catch (err) {
-        this.logger.warn(`Failed to delete image: ${err}`);
+        this.logger.warn(`Failed to delete image: ${String(err)}`);
       }
     }
 
@@ -313,7 +311,7 @@ export class ProjectsService {
     if (transformed.thumbnail && typeof transformed.thumbnail === 'string') {
       try {
         transformed.thumbnail = await this.storage.getPresignedUrl(
-          transformed.thumbnail as string,
+          transformed.thumbnail,
         );
       } catch {
         transformed.thumbnail = null;

@@ -29,7 +29,11 @@ function convertCamelToSnake(obj: any): any {
   }
 
   // Do not transform file buffers or special class instances
-  if (obj.constructor && obj.constructor.name !== 'Object' && obj.constructor.name !== 'Array') {
+  if (
+    obj.constructor &&
+    obj.constructor.name !== 'Object' &&
+    obj.constructor.name !== 'Array'
+  ) {
     return obj;
   }
 
@@ -37,11 +41,12 @@ function convertCamelToSnake(obj: any): any {
     return obj.map(convertCamelToSnake);
   }
 
-  return Object.keys(obj).reduce((acc, key) => {
+  return Object.keys(obj).reduce<Record<string, unknown>>((acc, key) => {
     const snakeKey = camelToSnake(key);
+
     acc[snakeKey] = convertCamelToSnake(obj[key]);
     return acc;
-  }, {} as any);
+  }, {});
 }
 
 @Injectable()
@@ -51,10 +56,7 @@ export class ResponseTransformerInterceptor<T> implements NestInterceptor<
 > {
   constructor(private readonly reflector: Reflector) {}
 
-  intercept(
-    context: ExecutionContext,
-    next: CallHandler,
-  ): Observable<any> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const ctx = context.switchToHttp();
     const req = ctx.getRequest<Request & { id?: string }>();
     const res = ctx.getResponse<ExpressResponse>();
@@ -70,9 +72,9 @@ export class ResponseTransformerInterceptor<T> implements NestInterceptor<
     );
 
     if (isRawResponse) {
-      return next.handle().pipe(
-        map((responseData: T) => convertCamelToSnake(responseData)),
-      );
+      return next
+        .handle()
+        .pipe(map((responseData: T) => convertCamelToSnake(responseData)));
     }
 
     return next.handle().pipe(
@@ -87,7 +89,7 @@ export class ResponseTransformerInterceptor<T> implements NestInterceptor<
           'data' in transformedData &&
           'meta' in transformedData
         ) {
-          return transformedData as unknown as StandardResponse<T>;
+          return transformedData;
         }
 
         // Otherwise, wrap the response in a "data" property
