@@ -44,8 +44,8 @@ jobs:
   build-and-push:
     name: Build & Push to Docker Hub
     needs: test
-    # Only run this job if the push is on the main branch (not on PRs)
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Only run on push to main, or manual workflow_dispatch from main
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
