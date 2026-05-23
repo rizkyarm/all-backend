@@ -20,28 +20,45 @@ import * as path from 'path';
 @Injectable()
 export class StorageService implements OnModuleInit {
   private s3Client: S3Client;
+  private s3PublicClient: S3Client;
   private readonly logger = new Logger(StorageService.name);
   private readonly bucketName: string;
 
   constructor(private configService: ConfigService) {
-    const endpoint = this.configService.get<string>('MINIO_ENDPOINT');
+    const endpoint = this.configService.get<string>('MINIO_ENDPOINT')!;
     const port = this.configService.get<number>('MINIO_PORT');
-    const accessKey = this.configService.get<string>('MINIO_ACCESS_KEY');
-    const secretKey = this.configService.get<string>('MINIO_SECRET_KEY');
+    const accessKey = this.configService.get<string>('MINIO_ACCESS_KEY')!;
+    const secretKey = this.configService.get<string>('MINIO_SECRET_KEY')!;
     this.bucketName = this.configService.get<string>('MINIO_BUCKET_NAME')!;
 
-    // For local MinIO, we need HTTP. In production S3, it would be HTTPS.
-    const s3Endpoint = `http://${endpoint}:${port}`;
-
-    this.s3Client = new S3Client({
-      region: 'us-east-1', // MinIO ignores this, but SDK requires a value
-      endpoint: s3Endpoint,
+    const baseConfig = {
+      region: 'us-east-1' as const,
       credentials: {
-        accessKeyId: accessKey!,
-        secretAccessKey: secretKey!,
+        accessKeyId: accessKey,
+        secretAccessKey: secretKey,
       },
-      forcePathStyle: true, // Crucial for MinIO compatibility
+      forcePathStyle: true as const,
+    };
+
+    // Internal client: used for upload / delete / bucket management
+    this.s3Client = new S3Client({
+      ...baseConfig,
+      endpoint: `http://${endpoint}:${port}`,
     });
+
+    // Public client: used for pre-signed URLs that the browser will call
+    const publicEndpoint =
+      this.configService.get<string>('MINIO_PUBLIC_ENDPOINT') || endpoint;
+    const publicPort =
+      this.configService.get<number>('MINIO_PUBLIC_PORT') || port;
+    this.s3PublicClient = new S3Client({
+      ...baseConfig,
+      endpoint: `http://${publicEndpoint}:${publicPort}`,
+    });
+
+    this.logger.log(
+      `Storage: internal=${endpoint}:${port} public=${publicEndpoint}:${publicPort}`,
+    );
   }
 
   async onModuleInit() {
@@ -126,7 +143,7 @@ export class StorageService implements OnModuleInit {
         Key: key,
       });
 
-      return await getSignedUrl(this.s3Client, command, { expiresIn });
+      return await getSignedUrl(this.s3PublicClient, command, { expiresIn });
     } catch (error: unknown) {
       const err = error as Error;
       this.logger.error(

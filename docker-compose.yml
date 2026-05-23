@@ -65,6 +65,8 @@ services:
       REDIS_PORT: 6379
       MINIO_ENDPOINT: minio
       MINIO_PORT: 9000
+      MINIO_PUBLIC_ENDPOINT: localhost
+      MINIO_PUBLIC_PORT: 9000
       MINIO_ACCESS_KEY: minio_user
       MINIO_SECRET_KEY: minio_password
       MINIO_BUCKET_NAME: my-bucket
