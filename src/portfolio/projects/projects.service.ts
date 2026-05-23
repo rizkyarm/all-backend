@@ -52,6 +52,22 @@ export class ProjectsService {
     return this.transformProject(project);
   }
 
+  /**
+   * Try to find a project by numeric ID first, then fall back to slug.
+   * Allows both /projects/7 and /projects/my-project to work.
+   */
+  async findByIdOrSlug(id: number, slug: string) {
+    const project = await this.prisma.client.project.findFirst({
+      where: { OR: [{ id }, { slug }] },
+    });
+
+    if (!project) {
+      throw new NotFoundException('Project not found');
+    }
+
+    return this.transformProject(project);
+  }
+
   // ─── Admin ──────────────────────────────────────────────────
 
   async findAllAdmin(query: QueryProjectDto) {

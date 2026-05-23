@@ -16,9 +16,14 @@ export class ProjectsController {
     return this.projectsService.findAllPublic(query);
   }
 
-  @Get(':slug')
+  @Get(':slugOrId')
   @Header('Cache-Control', 'no-cache, no-store, must-revalidate')
-  findBySlug(@Param('slug') slug: string) {
-    return this.projectsService.findBySlug(slug);
+  findBySlugOrId(@Param('slugOrId') slugOrId: string) {
+    // Try numeric ID first, then fall back to slug lookup
+    const id = Number(slugOrId);
+    if (!Number.isNaN(id)) {
+      return this.projectsService.findByIdOrSlug(id, slugOrId);
+    }
+    return this.projectsService.findBySlug(slugOrId);
   }
 }
