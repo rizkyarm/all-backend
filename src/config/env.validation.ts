@@ -30,6 +30,7 @@ export const envValidationSchema = Joi.object({
   // Storage (MinIO / Supabase S3)
   MINIO_ENDPOINT: Joi.string().required(),
   MINIO_PORT: Joi.number().default(9000),
+  MINIO_REGION: Joi.string().optional().default('us-east-1'),
   MINIO_PUBLIC_ENDPOINT: Joi.string().optional(),
   MINIO_PUBLIC_PORT: Joi.number().optional(),
   MINIO_ACCESS_KEY: Joi.string().required(),

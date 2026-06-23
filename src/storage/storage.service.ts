@@ -50,13 +50,13 @@ export class StorageService implements OnModuleInit {
     };
 
     const baseConfig = {
-      region: 'us-east-1' as const,
+      region: this.configService.get<string>('MINIO_REGION') || 'us-east-1',
       credentials: {
         accessKeyId: accessKey,
         secretAccessKey: secretKey,
       },
       forcePathStyle: true as const,
-      // Prevent indefinite hangs — fail fast on network issues
+        // Prevent indefinite hangs — fail fast on network issues
       requestTimeout: 30_000, // 30 detik per request
     };
 
@@ -158,7 +158,7 @@ export class StorageService implements OnModuleInit {
       const err = error as Error;
       this.logger.error(`Failed to upload file: ${err.message}`, err.stack);
       throw new InternalServerErrorException(
-        'Could not upload file to storage',
+        'Could not upload file to storage: ' + err.message,
       );
     }
   }
