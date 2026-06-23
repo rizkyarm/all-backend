@@ -56,6 +56,8 @@ export class StorageService implements OnModuleInit {
         secretAccessKey: secretKey,
       },
       forcePathStyle: true as const,
+      // Prevent indefinite hangs — fail fast on network issues
+      requestTimeout: 30_000, // 30 detik per request
     };
 
     // Internal client: used for upload / delete / bucket management
