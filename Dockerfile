@@ -51,7 +51,8 @@ COPY --chown=node:node prisma.config.ts tsconfig.json ./
 
 # Set placeholder DB vars so `prisma generate` can resolve prisma.config.ts
 # (real values are injected via docker-compose / K8s at runtime)
-ENV DB_USERNAME=placeholder \
+ENV DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder?schema=public \
+    DB_USERNAME=placeholder \
     DB_PASSWORD=placeholder \
     DB_HOST=localhost \
     DB_PORT=5432 \

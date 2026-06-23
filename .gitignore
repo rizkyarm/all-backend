@@ -21,6 +21,12 @@ nohup.out
 .env.local
 .env.*.local
 
+# Semua file .env KECUALI .env.example (template) dan .env.production (template)
+.env.supabase
+.env.public
+.env.production.local
+.env.supabase.local
+
 # OS
 .DS_Store
 
@@ -39,6 +45,13 @@ nohup.out
 
 # Docker
 docker-compose.override.yml
+
+# Cloudflare Tunnel — credentials & certificates
+cloudflared/*.json
+cloudflared/*.pem
+tunnel-url.json
+tunnel-url.txt
+get-tunnel-url.sh
 
 # IDE - VSCode
 .vscode/*

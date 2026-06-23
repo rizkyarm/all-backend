@@ -13,12 +13,14 @@ import {
   UploadedFiles,
   UseGuards,
   Header,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto, UpdateProjectDto, QueryProjectDto } from './dto';
 import { Roles } from '../../auth/decorators';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Role } from '../../common/enums';
 import { SnakeToCamelValidationPipe } from '../../common/pipes/snake-to-camel-validation.pipe';
@@ -26,10 +28,38 @@ import { SnakeToCamelValidationPipe } from '../../common/pipes/snake-to-camel-va
 @ApiTags('Portfolio - Admin Projects')
 @ApiBearerAuth()
 @Controller('admin/projects')
-@UseGuards(RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.ADMIN)
 export class AdminProjectsController {
   constructor(private readonly projectsService: ProjectsService) {}
+
+  private readonly ALLOWED_IMAGE_TYPES = [
+    'image/png',
+    'image/jpeg',
+    'image/jpg',
+    'image/webp',
+    'image/gif',
+    'image/svg+xml',
+    'image/avif',
+  ];
+  private readonly MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
+  /** Validate uploaded image files */
+  private validateFiles(files?: Express.Multer.File[]) {
+    if (!files || files.length === 0) return;
+    for (const f of files) {
+      if (f.size > this.MAX_FILE_SIZE) {
+        throw new BadRequestException(
+          `File "${f.originalname}" too large. Max ${this.MAX_FILE_SIZE / 1024 / 1024}MB`,
+        );
+      }
+      if (!this.ALLOWED_IMAGE_TYPES.includes(f.mimetype)) {
+        throw new BadRequestException(
+          `File "${f.originalname}" has unsupported type: ${f.mimetype}. Allowed: PNG, JPEG, WebP, GIF, SVG, AVIF`,
+        );
+      }
+    }
+  }
 
   @Get()
   @Header('Cache-Control', 'no-cache, no-store, must-revalidate')
@@ -66,6 +96,8 @@ export class AdminProjectsController {
       images?: Express.Multer.File[];
     },
   ) {
+    this.validateFiles(files?.thumbnail);
+    this.validateFiles(files?.images);
     return this.projectsService.create(
       dto,
       files?.thumbnail?.[0],
@@ -96,6 +128,8 @@ export class AdminProjectsController {
       images?: Express.Multer.File[];
     },
   ) {
+    this.validateFiles(files?.thumbnail);
+    this.validateFiles(files?.images);
     return this.projectsService.update(
       id,
       dto,
@@ -127,6 +161,8 @@ export class AdminProjectsController {
       images?: Express.Multer.File[];
     },
   ) {
+    this.validateFiles(files?.thumbnail);
+    this.validateFiles(files?.images);
     return this.projectsService.update(
       id,
       dto,

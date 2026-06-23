@@ -14,13 +14,14 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { SkillsService } from './skills.service';
 import { CreateSkillDto, UpdateSkillDto } from './dto';
 import { Roles } from '../../auth/decorators';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Role } from '../../common/enums';
 
 @ApiTags('Portfolio - Admin Skills')
 @ApiBearerAuth()
 @Controller('admin/skills')
-@UseGuards(RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.ADMIN)
 export class AdminSkillsController {
   constructor(private readonly skillsService: SkillsService) {}

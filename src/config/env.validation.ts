@@ -6,12 +6,13 @@ export const envValidationSchema = Joi.object({
     .default('development'),
   PORT: Joi.number().default(3000),
 
-  // Database
-  DB_HOST: Joi.string().required(),
+  // Database — use DATABASE_URL (Railway/Supabase) or individual vars (local Docker)
+  DATABASE_URL: Joi.string().optional().allow(''),
+  DB_HOST: Joi.string().optional().allow(''),
   DB_PORT: Joi.number().default(5432),
-  DB_USERNAME: Joi.string().required(),
-  DB_PASSWORD: Joi.string().required(),
-  DB_DATABASE: Joi.string().required(),
+  DB_USERNAME: Joi.string().optional().allow(''),
+  DB_PASSWORD: Joi.string().optional().allow(''),
+  DB_DATABASE: Joi.string().optional().allow(''),
 
   // JWT
   JWT_ACCESS_SECRET: Joi.string().required(),
@@ -19,11 +20,14 @@ export const envValidationSchema = Joi.object({
   JWT_ACCESS_EXPIRATION: Joi.string().default('15m'),
   JWT_REFRESH_EXPIRATION: Joi.string().default('7d'),
 
-  // Redis
-  REDIS_HOST: Joi.string().required(),
+  // Redis — use REDIS_URL (Upstash) or REDIS_HOST+PORT (local Docker)
+  REDIS_URL: Joi.string().optional().allow(''),
+  REDIS_HOST: Joi.string().optional().allow(''),
   REDIS_PORT: Joi.number().default(6379),
+  REDIS_PASSWORD: Joi.string().optional().allow(''),
+  REDIS_TLS: Joi.string().optional().allow('').default('false'),
 
-  // MinIO
+  // Storage (MinIO / Supabase S3)
   MINIO_ENDPOINT: Joi.string().required(),
   MINIO_PORT: Joi.number().default(9000),
   MINIO_PUBLIC_ENDPOINT: Joi.string().optional(),
@@ -31,4 +35,11 @@ export const envValidationSchema = Joi.object({
   MINIO_ACCESS_KEY: Joi.string().required(),
   MINIO_SECRET_KEY: Joi.string().required(),
   MINIO_BUCKET_NAME: Joi.string().required(),
+  MINIO_USE_SSL: Joi.string().optional().default('false'),
+
+  // Bcrypt
+  BCRYPT_SALT_ROUNDS: Joi.number().optional().default(12),
+
+  // Frontend
+  FRONTEND_URL: Joi.string().optional().default('*'),
 });

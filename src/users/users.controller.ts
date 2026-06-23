@@ -12,6 +12,7 @@ import { UsersService } from './users.service';
 import { UpdateProfileDto, AssignRoleDto } from './dto';
 import { CurrentUser, Roles } from '../auth/decorators';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Role } from '../common/enums';
 import { PaginationDto } from '../common/dto';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
@@ -19,6 +20,7 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 @ApiTags('Users')
 @ApiBearerAuth()
 @Controller('users')
+@UseGuards(JwtAuthGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
@@ -37,7 +39,7 @@ export class UsersController {
 
   @Patch(':id/role')
   @Roles(Role.ADMIN)
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   assignRole(
     @Param('id', ParseUUIDPipe) targetUserId: string,
     @Body() dto: AssignRoleDto,
@@ -48,7 +50,7 @@ export class UsersController {
 
   @Get()
   @Roles(Role.ADMIN)
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   findAll(@Query() dto: PaginationDto) {
     return this.usersService.findAll(dto);
   }

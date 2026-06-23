@@ -28,9 +28,11 @@ async function bootstrap() {
   const frontendUrl = process.env.FRONTEND_URL;
   app.enableCors({
     origin: frontendUrl ? frontendUrl.split(',').map((u) => u.trim()) : '*',
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: !!frontendUrl, // Only enable credentials when a specific origin is set
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Correlation-Id'],
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
   });
 
   app.useGlobalPipes(

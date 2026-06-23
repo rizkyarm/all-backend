@@ -11,13 +11,14 @@ import {
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { MessagesService } from './messages.service';
 import { Roles } from '../../auth/decorators';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Role } from '../../common/enums';
 
 @ApiTags('Portfolio - Admin Messages')
 @ApiBearerAuth()
 @Controller('admin/messages')
-@UseGuards(RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.ADMIN)
 export class AdminMessagesController {
   constructor(private readonly messagesService: MessagesService) {}

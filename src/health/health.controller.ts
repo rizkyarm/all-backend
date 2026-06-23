@@ -49,15 +49,30 @@ export class HealthController {
           thresholdPercent: 0.9,
         }),
 
-      // Check Redis Connection
-      () =>
-        this.microservice.pingCheck<RedisOptions>('redis', {
+      // Check Redis Connection (supports REDIS_URL or REDIS_HOST+PORT)
+      () => {
+        const redisUrl = this.configService.get<string>('REDIS_URL');
+        let host: string;
+        let port: number;
+        let password: string | undefined;
+
+        if (redisUrl) {
+          const parsed = new URL(redisUrl);
+          host = parsed.hostname;
+          port = parseInt(parsed.port || '6379', 10);
+          password = decodeURIComponent(parsed.password || '') || undefined;
+        } else {
+          host = this.configService.get<string>('REDIS_HOST')!;
+          port = this.configService.get<number>('REDIS_PORT')!;
+          password =
+            this.configService.get<string>('REDIS_PASSWORD') || undefined;
+        }
+
+        return this.microservice.pingCheck<RedisOptions>('redis', {
           transport: Transport.REDIS,
-          options: {
-            host: this.configService.get<string>('REDIS_HOST'),
-            port: this.configService.get<number>('REDIS_PORT'),
-          },
-        }),
+          options: { host, port, password },
+        });
+      },
     ]);
   }
 }

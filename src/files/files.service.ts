@@ -102,4 +102,24 @@ export class FilesService {
       expiresIn: 3600,
     };
   }
+
+  /**
+   * Proxy a file from MinIO — public access, no auth required.
+   * Used so frontend can fetch files via the API tunnel without exposing MinIO.
+   */
+  async streamFile(key: string): Promise<{ buffer: Buffer; mimetype: string }> {
+    const buffer = await this.storageService.downloadFile(key);
+    // Guess mimetype from extension
+    const ext = key.split('.').pop()?.toLowerCase();
+    const mimeMap: Record<string, string> = {
+      png: 'image/png',
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      gif: 'image/gif',
+      webp: 'image/webp',
+      svg: 'image/svg+xml',
+      pdf: 'application/pdf',
+    };
+    return { buffer, mimetype: mimeMap[ext || ''] || 'application/octet-stream' };
+  }
 }

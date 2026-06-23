@@ -1,0 +1,9 @@
+tunnel: 7cd543f6-8049-4340-ae85-86fffa1a200a
+credentials-file: /etc/cloudflared/7cd543f6-8049-4340-ae85-86fffa1a200a.json
+
+ingress:
+  - hostname: api.rizkiaditiyar-backend.my.id
+    service: http://api:3000
+  - hostname: rizkiaditiyar-backend.my.id
+    service: http://api:3000
+  - service: http_status:404

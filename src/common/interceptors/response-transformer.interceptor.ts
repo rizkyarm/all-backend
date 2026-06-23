@@ -3,6 +3,7 @@ import {
   NestInterceptor,
   ExecutionContext,
   CallHandler,
+  Logger,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
@@ -17,6 +18,51 @@ export interface StandardResponse<T> {
 
 function camelToSnake(str: string): string {
   return str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+}
+
+/**
+ * Rewrite local MinIO URLs to public proxy URLs.
+ * Replaces: http://localhost:9000/my-bucket/file.jpg
+ * With:     https://<public-url>/api/v1/files/proxy/file.jpg
+ */
+function rewriteStorageUrls(obj: any): any {
+  if (obj === null || typeof obj !== 'object') {
+    // String values: check for MinIO URLs
+    if (
+      typeof obj === 'string' &&
+      obj.startsWith('http://localhost:9000/my-bucket/')
+    ) {
+      const publicUrl = process.env.PUBLIC_URL;
+      if (publicUrl) {
+        // Extract key without query params, then encode slashes
+        const stripped = obj.replace('http://localhost:9000/my-bucket/', '');
+        const key = stripped.split('?')[0]; // Remove S3 presigned params
+        return `${publicUrl}/api/v1/files/proxy/${encodeURIComponent(key)}`;
+      }
+    }
+    return obj;
+  }
+
+  if (obj instanceof Date) {
+    return obj;
+  }
+
+  if (
+    obj.constructor &&
+    obj.constructor.name !== 'Object' &&
+    obj.constructor.name !== 'Array'
+  ) {
+    return obj;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(rewriteStorageUrls);
+  }
+
+  return Object.keys(obj).reduce<Record<string, unknown>>((acc, key) => {
+    acc[key] = rewriteStorageUrls(obj[key]);
+    return acc;
+  }, {});
 }
 
 function convertCamelToSnake(obj: any): any {
@@ -74,15 +120,20 @@ export class ResponseTransformerInterceptor<T> implements NestInterceptor<
     if (isRawResponse) {
       return next
         .handle()
-        .pipe(map((responseData: T) => convertCamelToSnake(responseData)));
+        .pipe(
+          map((responseData: T) =>
+            rewriteStorageUrls(convertCamelToSnake(responseData)),
+          ),
+        );
     }
 
     return next.handle().pipe(
       map((responseData: T) => {
-        const transformedData = convertCamelToSnake(responseData);
+        const transformedData = rewriteStorageUrls(
+          convertCamelToSnake(responseData),
+        );
 
         // If the response is already formatted with data and meta, return as is
-        // (Useful for paginated responses like findAll)
         if (
           transformedData &&
           typeof transformedData === 'object' &&

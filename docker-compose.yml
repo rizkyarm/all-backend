@@ -53,9 +53,12 @@ services:
     restart: always
     ports:
       - '3000:3000'
+    env_file:
+      - .env.public
     environment:
       NODE_ENV: production
       PORT: 3000
+      DATABASE_URL: postgresql://user_admin:password_rahasia@postgres:5432/db_project?schema=public
       DB_HOST: postgres
       DB_PORT: 5432
       DB_USERNAME: user_admin
@@ -85,6 +88,19 @@ services:
     networks:
       - app_network
     command: sh -c "sleep 3 && npx prisma migrate deploy && node dist/main.js"
+
+  # Cloudflare Named Tunnel
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: nestjs-tunnel
+    restart: always
+    command: tunnel --config /etc/cloudflared/config.yml run --protocol http2
+    volumes:
+      - ./cloudflared:/etc/cloudflared:ro
+    depends_on:
+      - api
+    networks:
+      - app_network
 
 volumes:
   postgres_data:

@@ -1,0 +1,25 @@
+# ================================
+# Supabase Deployment — API Only
+# ================================
+# Database & Storage → Supabase (managed)
+# Redis               → Upstash / Redis Cloud (external)
+# Only the NestJS API runs as a container.
+#
+# Usage:
+#   1. Fill .env.supabase with real credentials
+#   2. docker compose -f docker-compose.supabase.yml up -d
+# ================================
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: all-backend-api
+    restart: always
+    ports:
+      - '3000:3000'
+    env_file:
+      - .env.supabase
+    # Wait a few seconds then apply migrations & start
+    command: sh -c "sleep 3 && npx prisma migrate deploy && node dist/main.js"

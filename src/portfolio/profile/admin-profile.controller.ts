@@ -13,6 +13,7 @@ import { ApiTags, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { ProfileService } from './profile.service';
 import { UpdateProfileDto } from './dto';
 import { Roles } from '../../auth/decorators';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Role } from '../../common/enums';
 import { SnakeToCamelValidationPipe } from '../../common/pipes/snake-to-camel-validation.pipe';
@@ -20,7 +21,7 @@ import { SnakeToCamelValidationPipe } from '../../common/pipes/snake-to-camel-va
 @ApiTags('Portfolio - Admin Profile')
 @ApiBearerAuth()
 @Controller('admin/profile')
-@UseGuards(RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.ADMIN)
 export class AdminProfileController {
   constructor(private readonly profileService: ProfileService) {}
