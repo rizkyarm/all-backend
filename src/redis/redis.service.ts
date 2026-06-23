@@ -17,13 +17,19 @@ function parseRedisUrl(url: string): {
   password?: string;
   tls: boolean;
 } {
-  const parsed = new URL(url);
-  return {
-    host: parsed.hostname,
-    port: parseInt(parsed.port || '6379', 10),
-    password: decodeURIComponent(parsed.password || '') || undefined,
-    tls: parsed.protocol === 'rediss:' || parsed.protocol === 'redis+tls:',
-  };
+  try {
+    const parsed = new URL(url);
+    return {
+      host: parsed.hostname,
+      port: parseInt(parsed.port || '6379', 10),
+      password: decodeURIComponent(parsed.password || '') || undefined,
+      tls: parsed.protocol === 'rediss:' || parsed.protocol === 'redis+tls:',
+    };
+  } catch {
+    throw new Error(
+      `Invalid REDIS_URL: "${url}". Must be like rediss://default:password@host:6379`,
+    );
+  }
 }
 
 @Injectable()
@@ -42,13 +48,22 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     let tls = false;
 
     if (redisUrl) {
-      // Parse URL for host/port/password/TLS
-      const opts = parseRedisUrl(redisUrl);
-      host = opts.host;
-      port = opts.port;
-      password = envPassword || opts.password; // env overrides URL password
-      tls = opts.tls;
-      this.logger.log(`Redis: URL parsed → ${host}:${port} (TLS: ${tls})`);
+      try {
+        // Parse URL for host/port/password/TLS
+        const opts = parseRedisUrl(redisUrl);
+        host = opts.host;
+        port = opts.port;
+        password = envPassword || opts.password;
+        tls = opts.tls;
+        this.logger.log(`Redis: URL parsed → ${host}:${port} (TLS: ${tls})`);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        this.logger.warn(message);
+        host = this.configService.get<string>('REDIS_HOST')!;
+        port = this.configService.get<number>('REDIS_PORT')!;
+        password = envPassword;
+        tls = this.configService.get<string>('REDIS_TLS') === 'true';
+      }
     } else {
       // Local / Docker Redis
       host = this.configService.get<string>('REDIS_HOST')!;

@@ -76,16 +76,27 @@ import * as crypto from 'crypto';
         let tls = false;
 
         if (redisUrl) {
-          const parsed = new URL(redisUrl);
-          host = parsed.hostname;
-          port = parseInt(parsed.port || '6379', 10);
-          password =
-            envPassword ||
-            decodeURIComponent(parsed.password || '') ||
-            undefined;
-          tls =
-            parsed.protocol === 'rediss:' ||
-            parsed.protocol === 'redis+tls:';
+          try {
+            const parsed = new URL(redisUrl);
+            host = parsed.hostname;
+            port = parseInt(parsed.port || '6379', 10);
+            password =
+              envPassword ||
+              decodeURIComponent(parsed.password || '') ||
+              undefined;
+            tls =
+              parsed.protocol === 'rediss:' ||
+              parsed.protocol === 'redis+tls:';
+          } catch {
+            // Invalid REDIS_URL — fall back to REDIS_HOST/REDIS_PORT
+            console.warn(
+              `Invalid REDIS_URL "${redisUrl}". Falling back to REDIS_HOST/REDIS_PORT.`,
+            );
+            host = configService.get<string>('REDIS_HOST')!;
+            port = configService.get<number>('REDIS_PORT')!;
+            password = envPassword;
+            tls = configService.get<string>('REDIS_TLS') === 'true';
+          }
         } else {
           host = configService.get<string>('REDIS_HOST')!;
           port = configService.get<number>('REDIS_PORT')!;
