@@ -77,7 +77,7 @@ export class StorageService implements OnModuleInit {
     });
 
     this.logger.log(
-      `Storage: internal=${endpoint}:${port} public=${publicEndpoint}:${publicPort} ssl=${useSsl}`,
+      `Storage: internal=${endpoint}:${port} public=${publicEndpoint}:${publicPort} ssl=${useSsl} region=${this.configService.get<string>('MINIO_REGION') || 'us-east-1'} accessKey=${accessKey.substring(0, 12)}...`,
     );
   }
 
