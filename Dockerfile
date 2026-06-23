@@ -69,5 +69,5 @@ USER node
 # Expose the application port
 EXPOSE 3000
 
-# Start the application
-CMD ["node", "dist/main.js"]
+# Start the application (auto-run migrations first)
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
