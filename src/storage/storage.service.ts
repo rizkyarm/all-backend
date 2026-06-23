@@ -32,6 +32,10 @@ export class StorageService implements OnModuleInit {
     this.bucketName = this.configService.get<string>('MINIO_BUCKET_NAME')!;
     const useSsl = this.configService.get<string>('MINIO_USE_SSL') === 'true';
 
+    // Strip accidental https:// or http:// prefix from hostname
+    const cleanHost = (h: string) =>
+      h.replace(/^https?:\/\//, '').replace(/\/$/, '');
+
     const protocol = useSsl ? 'https' : 'http';
 
     // Build the S3 endpoint URL.
@@ -57,7 +61,7 @@ export class StorageService implements OnModuleInit {
     // Internal client: used for upload / delete / bucket management
     this.s3Client = new S3Client({
       ...baseConfig,
-      endpoint: buildEndpoint(endpoint, port),
+      endpoint: buildEndpoint(cleanHost(endpoint), port),
     });
 
     // Public client: used for pre-signed URLs that the browser will call
@@ -67,7 +71,7 @@ export class StorageService implements OnModuleInit {
       this.configService.get<number>('MINIO_PUBLIC_PORT') || port;
     this.s3PublicClient = new S3Client({
       ...baseConfig,
-      endpoint: buildEndpoint(publicEndpoint, publicPort),
+      endpoint: buildEndpoint(cleanHost(publicEndpoint), publicPort),
     });
 
     this.logger.log(

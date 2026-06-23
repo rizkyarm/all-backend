@@ -104,6 +104,13 @@ import * as crypto from 'crypto';
           tls = configService.get<string>('REDIS_TLS') === 'true';
         }
 
+        // Guard: ensure we have a valid Redis host
+        if (!host) {
+          throw new Error(
+            'Redis connection not configured. Set REDIS_URL (Upstash) or REDIS_HOST + REDIS_PORT in environment.',
+          );
+        }
+
         return {
           connection: {
             host,
