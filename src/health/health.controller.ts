@@ -2,14 +2,10 @@ import { Controller, Get } from '@nestjs/common';
 import {
   HealthCheck,
   HealthCheckService,
-  HttpHealthIndicator,
   MemoryHealthIndicator,
   PrismaHealthIndicator,
   DiskHealthIndicator,
-  MicroserviceHealthIndicator,
 } from '@nestjs/terminus';
-import { Transport, RedisOptions } from '@nestjs/microservices';
-import { ConfigService } from '@nestjs/config';
 import { Public } from '../auth/decorators';
 import { ApiTags } from '@nestjs/swagger';
 import { PrismaService } from '../prisma/prisma.service';
@@ -20,22 +16,16 @@ import { PrismaService } from '../prisma/prisma.service';
 export class HealthController {
   constructor(
     private health: HealthCheckService,
-    private http: HttpHealthIndicator,
     private prisma: PrismaHealthIndicator,
     private memory: MemoryHealthIndicator,
     private disk: DiskHealthIndicator,
-    private microservice: MicroserviceHealthIndicator,
     private prismaService: PrismaService,
-    private configService: ConfigService,
   ) {}
 
   @Get()
   @HealthCheck()
   check() {
     return this.health.check([
-      // Check if external internet connection works
-      () => this.http.pingCheck('internet', 'https://1.1.1.1'),
-
       // Check Database Connection
       () => this.prisma.pingCheck('database', this.prismaService.client),
 
@@ -48,31 +38,6 @@ export class HealthController {
           path: '/',
           thresholdPercent: 0.9,
         }),
-
-      // Check Redis Connection (supports REDIS_URL or REDIS_HOST+PORT)
-      () => {
-        const redisUrl = this.configService.get<string>('REDIS_URL');
-        let host: string;
-        let port: number;
-        let password: string | undefined;
-
-        if (redisUrl) {
-          const parsed = new URL(redisUrl);
-          host = parsed.hostname;
-          port = parseInt(parsed.port || '6379', 10);
-          password = decodeURIComponent(parsed.password || '') || undefined;
-        } else {
-          host = this.configService.get<string>('REDIS_HOST')!;
-          port = this.configService.get<number>('REDIS_PORT')!;
-          password =
-            this.configService.get<string>('REDIS_PASSWORD') || undefined;
-        }
-
-        return this.microservice.pingCheck<RedisOptions>('redis', {
-          transport: Transport.REDIS,
-          options: { host, port, password },
-        });
-      },
     ]);
   }
 }

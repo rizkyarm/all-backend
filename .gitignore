@@ -21,9 +21,13 @@ nohup.out
 .env.local
 .env.*.local
 
-# Semua file .env KECUALI .env.example (template) dan .env.production (template)
+# Semua file .env — KECUALI .env.example (template publik)
+.env
+.env.local
+.env.*.local
 .env.supabase
 .env.public
+.env.production
 .env.production.local
 .env.supabase.local
 
