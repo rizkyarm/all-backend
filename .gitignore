@@ -16,18 +16,10 @@ yarn-error.log*
 lerna-debug.log*
 nohup.out
 
-# Environment
+# Environment — BLOCK semua .env, KECUALI .env.example (template publik)
 .env
-.env.local
-.env.*.local
-
-# Semua file .env — KECUALI .env.example (template publik)
-.env
-.env.local
-.env.*.local
-.env.supabase
-.env.public
-.env.production
+.env.*
+!.env.example
 .env.production.local
 .env.supabase.local
 
