@@ -37,10 +37,11 @@ services:
         sync: false
 
       # ── JWT ───────────────────────────────────────────────
+      # Generate with: openssl rand -hex 64
       - key: JWT_ACCESS_SECRET
-        generateValue: true
+        sync: false
       - key: JWT_REFRESH_SECRET
-        generateValue: true
+        sync: false
       - key: JWT_ACCESS_EXPIRATION
         value: "15m"
       - key: JWT_REFRESH_EXPIRATION
