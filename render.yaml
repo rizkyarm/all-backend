@@ -27,6 +27,8 @@ services:
         value: my-bucket
       - key: MINIO_USE_SSL
         value: "true"
+      - key: MINIO_REGION
+        sync: false
       - key: MINIO_PUBLIC_ENDPOINT
         sync: false
       - key: MINIO_PUBLIC_PORT
