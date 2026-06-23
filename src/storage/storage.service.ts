@@ -14,15 +14,18 @@ import {
   CreateBucketCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
 import * as path from 'path';
 
 @Injectable()
 export class StorageService implements OnModuleInit {
-  private s3Client: S3Client;
-  private s3PublicClient: S3Client;
+  private s3Client!: S3Client;
+  private s3PublicClient!: S3Client;
+  private supabase: SupabaseClient | null = null;
   private readonly logger = new Logger(StorageService.name);
   private readonly bucketName: string;
+  private readonly useSupabase: boolean;
 
   constructor(private configService: ConfigService) {
     const endpoint = this.configService.get<string>('MINIO_ENDPOINT')!;
@@ -30,58 +33,63 @@ export class StorageService implements OnModuleInit {
     const accessKey = this.configService.get<string>('MINIO_ACCESS_KEY')!;
     const secretKey = this.configService.get<string>('MINIO_SECRET_KEY')!;
     this.bucketName = this.configService.get<string>('MINIO_BUCKET_NAME')!;
-    const useSsl = this.configService.get<string>('MINIO_USE_SSL') === 'true';
+    this.useSupabase =
+      this.configService.get<string>('MINIO_USE_SSL') === 'true';
 
-    // Strip accidental https:// or http:// prefix from hostname
-    const cleanHost = (h: string) =>
-      h.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    if (this.useSupabase) {
+      const supabaseUrl = `https://${endpoint}`;
+      this.supabase = createClient(supabaseUrl, secretKey, {
+        auth: { persistSession: false },
+      });
+      this.logger.log(
+        `Storage: mode=supabase url=${supabaseUrl} bucket=${this.bucketName}`,
+      );
+    } else {
+      const cleanHost = (h: string) =>
+        h.replace(/^https?:\/\//, '').replace(/\/$/, '');
 
-    const protocol = useSsl ? 'https' : 'http';
+      const buildEndpoint = (host: string, p: number | undefined): string => {
+        const base = `http://${host}`;
+        const needsPort = p && p !== 80;
+        return needsPort ? `${base}:${p}` : base;
+      };
 
-    // Build the S3 endpoint URL.
-    // For Supabase Storage (SSL): https://<project-ref>.supabase.co/storage/v1/s3
-    // For MinIO local (HTTP):    http://minio:9000
-    const buildEndpoint = (host: string, p: number | undefined): string => {
-      const base = `${protocol}://${host}`;
-      const needsPort = p && p !== 443 && p !== 80;
-      // Supabase uses /storage/v1/s3 path, MinIO does not
-      const suffix = useSsl ? '/storage/v1/s3' : '';
-      return needsPort ? `${base}:${p}${suffix}` : `${base}${suffix}`;
-    };
+      const baseConfig = {
+        region: 'us-east-1' as const,
+        credentials: {
+          accessKeyId: accessKey,
+          secretAccessKey: secretKey,
+        },
+        forcePathStyle: true as const,
+        requestTimeout: 30_000,
+      };
 
-    const baseConfig = {
-      region: this.configService.get<string>('MINIO_REGION') || 'us-east-1',
-      credentials: {
-        accessKeyId: accessKey,
-        secretAccessKey: secretKey,
-      },
-      forcePathStyle: true as const,
-        // Prevent indefinite hangs — fail fast on network issues
-      requestTimeout: 30_000, // 30 detik per request
-    };
+      this.s3Client = new S3Client({
+        ...baseConfig,
+        endpoint: buildEndpoint(cleanHost(endpoint), port),
+      });
 
-    // Internal client: used for upload / delete / bucket management
-    this.s3Client = new S3Client({
-      ...baseConfig,
-      endpoint: buildEndpoint(cleanHost(endpoint), port),
-    });
+      const publicEndpoint =
+        this.configService.get<string>('MINIO_PUBLIC_ENDPOINT') || endpoint;
+      const publicPort =
+        this.configService.get<number>('MINIO_PUBLIC_PORT') || port;
+      this.s3PublicClient = new S3Client({
+        ...baseConfig,
+        endpoint: buildEndpoint(cleanHost(publicEndpoint), publicPort),
+      });
 
-    // Public client: used for pre-signed URLs that the browser will call
-    const publicEndpoint =
-      this.configService.get<string>('MINIO_PUBLIC_ENDPOINT') || endpoint;
-    const publicPort =
-      this.configService.get<number>('MINIO_PUBLIC_PORT') || port;
-    this.s3PublicClient = new S3Client({
-      ...baseConfig,
-      endpoint: buildEndpoint(cleanHost(publicEndpoint), publicPort),
-    });
-
-    this.logger.log(
-      `Storage: internal=${endpoint}:${port} public=${publicEndpoint}:${publicPort} ssl=${useSsl} region=${this.configService.get<string>('MINIO_REGION') || 'us-east-1'} accessKey=${accessKey.substring(0, 12)}...`,
-    );
+      this.logger.log(
+        `Storage: mode=minio internal=${endpoint}:${port} public=${publicEndpoint}:${publicPort}`,
+      );
+    }
   }
 
   async onModuleInit() {
+    if (this.useSupabase) {
+      this.logger.log('Storage: Supabase native client ready');
+      return;
+    }
+
     this.logger.log(
       `StorageService initialized. Checking bucket: ${this.bucketName}`,
     );
@@ -95,46 +103,22 @@ export class StorageService implements OnModuleInit {
         name?: string;
         $metadata?: { httpStatusCode?: number };
         message?: string;
-        stack?: string;
       };
       if (
         s3Error.name === 'NotFound' ||
         s3Error.$metadata?.httpStatusCode === 404
       ) {
-        // Supabase: bucket must be created manually via Dashboard → Storage
-        // MinIO local: auto-create
-        const useSsl =
-          this.configService.get<string>('MINIO_USE_SSL') === 'true';
-        if (useSsl) {
-          this.logger.warn(
-            `Bucket '${this.bucketName}' not found. Please create it manually in Supabase Dashboard → Storage.`,
-          );
-        } else {
-          this.logger.log(
-            `Bucket '${this.bucketName}' not found. Creating...`,
-          );
-          await this.s3Client.send(
-            new CreateBucketCommand({ Bucket: this.bucketName }),
-          );
-          this.logger.log(`Bucket '${this.bucketName}' created successfully.`);
-        }
-      } else {
-        this.logger.error(
-          `Error checking bucket: ${s3Error.message}`,
-          s3Error.stack,
+        this.logger.log(`Bucket '${this.bucketName}' not found. Creating...`);
+        await this.s3Client.send(
+          new CreateBucketCommand({ Bucket: this.bucketName }),
         );
+        this.logger.log(`Bucket '${this.bucketName}' created successfully.`);
+      } else {
+        this.logger.error(`Error checking bucket: ${s3Error.message}`);
       }
     }
   }
 
-  /**
-   * Uploads a file to the S3/MinIO bucket.
-   * @param fileBuffer The buffer of the file
-   * @param originalName The original filename
-   * @param mimetype The MIME type of the file
-   * @param folder The target folder inside the bucket
-   * @returns The generated key (filename) in the bucket
-   */
   async uploadFile(
     fileBuffer: Buffer,
     originalName: string,
@@ -145,17 +129,28 @@ export class StorageService implements OnModuleInit {
       const ext = path.extname(originalName);
       const filename = `${folder}/${uuidv4()}${ext}`;
 
+      if (this.useSupabase && this.supabase) {
+        const { data, error } = await this.supabase.storage
+          .from(this.bucketName)
+          .upload(filename, fileBuffer, {
+            contentType: mimetype,
+            upsert: false,
+          });
+
+        if (error) throw error;
+        return data!.path;
+      }
+
       const command = new PutObjectCommand({
         Bucket: this.bucketName,
         Key: filename,
         Body: fileBuffer,
         ContentType: mimetype,
       });
-
       await this.s3Client.send(command);
       return filename;
     } catch (error: unknown) {
-      const err = error as Error;
+      const err = error as Error & { statusCode?: number };
       this.logger.error(`Failed to upload file: ${err.message}`, err.stack);
       throw new InternalServerErrorException(
         'Could not upload file to storage: ' + err.message,
@@ -163,18 +158,21 @@ export class StorageService implements OnModuleInit {
     }
   }
 
-  /**
-   * Generates a temporary, pre-signed URL to access a private file.
-   * @param key The file key (e.g., 'uploads/123.jpg')
-   * @param expiresIn Expiration time in seconds (default 1 hour)
-   */
   async getPresignedUrl(key: string, expiresIn = 3600): Promise<string> {
     try {
+      if (this.useSupabase && this.supabase) {
+        const { data, error } = await this.supabase.storage
+          .from(this.bucketName)
+          .createSignedUrl(key, expiresIn);
+
+        if (error) throw error;
+        return data!.signedUrl;
+      }
+
       const command = new GetObjectCommand({
         Bucket: this.bucketName,
         Key: key,
       });
-
       return await getSignedUrl(this.s3PublicClient, command, { expiresIn });
     } catch (error: unknown) {
       const err = error as Error;
@@ -186,17 +184,22 @@ export class StorageService implements OnModuleInit {
     }
   }
 
-  /**
-   * Downloads a file from the bucket and returns its buffer.
-   */
   async downloadFile(key: string): Promise<Buffer> {
     try {
+      if (this.useSupabase && this.supabase) {
+        const { data, error } = await this.supabase.storage
+          .from(this.bucketName)
+          .download(key);
+
+        if (error) throw error;
+        return Buffer.from(await data!.arrayBuffer());
+      }
+
       const command = new GetObjectCommand({
         Bucket: this.bucketName,
         Key: key,
       });
       const response = await this.s3Client.send(command);
-      // Convert readable stream to Buffer
       const chunks: Buffer[] = [];
       if (response.Body) {
         for await (const chunk of response.Body as AsyncIterable<Uint8Array>) {
@@ -211,17 +214,21 @@ export class StorageService implements OnModuleInit {
     }
   }
 
-  /**
-   * Deletes a file from the bucket.
-   * @param key The file key
-   */
   async deleteFile(key: string): Promise<void> {
     try {
+      if (this.useSupabase && this.supabase) {
+        const { error } = await this.supabase.storage
+          .from(this.bucketName)
+          .remove([key]);
+
+        if (error) throw error;
+        return;
+      }
+
       const command = new DeleteObjectCommand({
         Bucket: this.bucketName,
         Key: key,
       });
-
       await this.s3Client.send(command);
     } catch (error: unknown) {
       const err = error as Error;
