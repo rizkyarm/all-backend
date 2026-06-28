@@ -8,7 +8,6 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
-import { NotificationsService } from '../notifications/notifications.service';
 import { EmailQueue } from '../email/email.queue';
 import { RegisterDto, LoginDto } from './dto';
 import * as bcrypt from 'bcrypt';
@@ -40,7 +39,6 @@ export class AuthService {
     private readonly redis: RedisService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-    private readonly notificationsService: NotificationsService,
     private readonly emailQueue: EmailQueue,
   ) {}
 

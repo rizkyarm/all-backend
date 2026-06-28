@@ -3,7 +3,17 @@ import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { SendEmailPayload } from './email.queue';
 
-@Processor('email')
+@Processor('email', {
+  // ⚡ Rate-limit: max 10 email jobs per 5 seconds
+  limiter: {
+    max: 10,
+    duration: 5000,
+  },
+  // Lock duration: how long a job stays locked (prevents double-processing)
+  lockDuration: 30000,
+  // Check for stalled jobs every 30s instead of default 15s (saves Redis requests)
+  stalledInterval: 30000,
+})
 export class EmailProcessor extends WorkerHost {
   private readonly logger = new Logger(EmailProcessor.name);
 

@@ -13,7 +13,6 @@ import { UsersModule } from './users/users.module';
 import { StorageModule } from './storage/storage.module';
 import { FilesModule } from './files/files.module';
 import { BullModule } from '@nestjs/bullmq';
-import { NotificationsModule } from './notifications/notifications.module';
 import { EmailModule } from './email/email.module';
 import { BullBoardModule } from '@bull-board/nestjs';
 import { ExpressAdapter } from '@bull-board/express';
@@ -117,16 +116,28 @@ import * as crypto from 'crypto';
             port,
             password,
             ...(tls ? { tls: {} } : {}),
+            // Connection pooling — reuse connections to reduce Redis request count
+            maxRetriesPerRequest: null, // Required for BullMQ workers
+            enableReadyCheck: false,   // Skip the initial INFO command
+            connectTimeout: 10000,
+            // ⚡ Critical: set a small keepAlive to reduce idle connection overhead
+            keepAlive: 5000,
           },
+          // ⚡ Prevent version check on every connection (saves ~1 Redis request per connection)
+          skipVersionCheck: true,
         };
       },
     }),
-    BullBoardModule.forRoot({
-      route: '/queues',
-      adapter: ExpressAdapter,
-    }),
+    // ⚡ Bull Board hanya diaktifkan di non-production untuk menghemat Redis requests
+    ...(process.env.NODE_ENV !== 'production'
+      ? [
+          BullBoardModule.forRoot({
+            route: '/queues',
+            adapter: ExpressAdapter,
+          }),
+        ]
+      : []),
     ScheduleModule.forRoot(),
-    NotificationsModule,
     EmailModule,
     CronModule,
     PortfolioModule,

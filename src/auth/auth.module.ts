@@ -10,12 +10,10 @@ import { AdminAuthController } from './admin-auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
-import { NotificationsModule } from '../notifications/notifications.module';
 import { EmailModule } from '../email/email.module';
 
 @Module({
   imports: [
-    NotificationsModule,
     EmailModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
